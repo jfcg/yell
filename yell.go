@@ -20,8 +20,8 @@ import (
 // Severity is log severity type
 type Severity uint32
 
+// log severity levels
 const (
-	// log severity levels
 	Sinfo Severity = iota
 	Swarn
 	Serror
