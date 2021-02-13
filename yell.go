@@ -30,7 +30,7 @@ const (
 )
 
 // Sname is the list of severity names (in increasing severity) that appear in logs
-var Sname = [...]string{"info", "warn", "error", "fatal"}
+var Sname = [...]string{"info:", "warn:", "error:", "fatal:"}
 
 // TimeFormat in logs
 var TimeFormat = "2006-01-02 15:04:05.000000"
@@ -46,36 +46,39 @@ var UTC = false
 //  	"github.com/jfcg/yell"
 //  )
 //
-//  // log to any io.Writer, here warn or higher severity. Update
-//  // Logger.Slevel to change log severity level or disable logging.
-//  var Logger = yell.Logger{"mypkg", os.Stdout, yell.Swarn}
+//  // log to stdout with warn or higher severity (for example). Update Logger.Slevel to
+//  // change log severity level or disable logging. Message list given to Info() etc.
+//  // must not be empty or end with a newline.
+//  var Logger = yell.Logger{": mypkg:", os.Stdout, yell.Swarn}
 //
-//  // Info tries to log message with info severity
-//  func Info(msg string) error {
-//  	return Logger.Log(yell.Sinfo, msg)
+//  // Info tries to log message list with info severity
+//  func Info(msg ...interface{}) error {
+//  	return Logger.Log(yell.Sinfo, msg...)
 //  }
 //
-//  // Warn tries to log message with warn severity
-//  func Warn(msg string) error {
-//  	return Logger.Log(yell.Swarn, msg)
+//  // Warn tries to log message list with warn severity
+//  func Warn(msg ...interface{}) error {
+//  	return Logger.Log(yell.Swarn, msg...)
 //  }
 //
-//  // Error tries to log message with error severity
-//  func Error(msg string) (err error) {
-//  	err = Logger.Log(yell.Serror, msg)
+//  // Error tries to log message list with error severity
+//  func Error(msg ...interface{}) (err error) {
+//  	err = Logger.Log(yell.Serror, msg...)
 //  	// extra stuff for error severity
 //  	return
 //  }
 //
-//  // Fatal tries to log message with fatal severity
-//  func Fatal(msg string) (err error) {
-//  	err = Logger.Log(yell.Sfatal, msg)
-//  	// probably panic (or exit) in a fatal situation
-//  	panic(Logger.Package + ":" + yell.Sname[yell.Sfatal] + ": " + msg)
+//  // Fatal tries to log message list with fatal severity and panics
+//  func Fatal(msg ...interface{}) (err error) {
+//  	err = Logger.Log(Sfatal, msg...)
+//  	pm := Logger.Package[2:] + yell.Sname[yell.Sfatal]
+//  	if err != nil {
+//  		pm += err.Error()
+//  	}
+//  	panic(pm)
 //  }
 type Logger struct {
-
-	// Package or application name. It must not be empty.
+	// Package or application name. It must be of the form ": name:"
 	Package string
 
 	// Writer is used to log messages, can also be sync.Locker. It must not be nil.
@@ -91,26 +94,32 @@ type locker interface {
 	Unlock()
 }
 
-// Log records message to Logger if level is severe enough for Logger. It tries to
-// include log request location in log messages. Use as described in Logger doc.
+// Log records message list to Logger if level is severe enough for Logger and the list
+// is not empty. Message list must not end with a newline. Log tries to include request
+// location (file.go:line) in records, so it must be called as described in Logger doc.
 // If Logger.Writer also implements sync.Locker, Lock/Unlock is used to protect logging.
-func (lg *Logger) Log(level Severity, msg string) (err error) {
+func (lg *Logger) Log(level Severity, msg ...interface{}) (err error) {
 
-	if !(lg.Slevel <= level && level < Snolog) {
-		return // ignored level
+	if !(len(msg) > 0 && lg.Slevel <= level && level < Snolog) {
+		return // empty msg or ignored level
 	}
-	// prepare all input to Fprintf before locking
+
+	// prepare all input to Fprintln before possible locking
 	now := time.Now()
 	if UTC {
 		now = now.UTC()
 	}
-	ft := now.Format(TimeFormat)
+	prem := now.Format(TimeFormat) + lg.Package + Sname[level]
 
-	// try to locate logging location
-	_, file, line, fok := runtime.Caller(2)
-	if fok {
+	// try to locate request location
+	_, file, line, ok := runtime.Caller(2)
+	if ok {
 		file = filepath.Base(file) // full path to file name
+		prem += fmt.Sprintf(" %s:%d:", file, line)
 	}
+
+	// prepend prem
+	msg = append([]interface{}{prem}, msg...)
 
 	// see if Writer is also a sync.Locker
 	if lc, ok := lg.Writer.(locker); ok {
@@ -119,38 +128,39 @@ func (lg *Logger) Log(level Severity, msg string) (err error) {
 		defer lc.Unlock()
 	}
 
-	if fok {
-		_, err = fmt.Fprintf(lg.Writer, "%s: %s:%s: %s:%d: %s\n",
-			ft, lg.Package, Sname[level], file, line, msg)
-	} else {
-		_, err = fmt.Fprintf(lg.Writer, "%s: %s:%s: %s\n",
-			ft, lg.Package, Sname[level], msg)
-	}
+	fmt.Fprintln(lg.Writer, msg...)
 	return
 }
 
 // Default logger
 var Default = Logger{
-	filepath.Base(os.Args[0]), // application name
-	os.Stdout, Swarn}          // log to standard output with warn or higher severity
+	// application name
+	": " + filepath.Base(os.Args[0]) + ":",
 
-// Info tries to log message with info severity to Default logger
-func Info(msg string) error {
-	return Default.Log(Sinfo, msg)
+	// log to standard output with warn or higher severity
+	os.Stdout, Swarn}
+
+// Info tries to log message list with info severity to Default logger
+func Info(msg ...interface{}) error {
+	return Default.Log(Sinfo, msg...)
 }
 
-// Warn tries to log message with warn severity to Default logger
-func Warn(msg string) error {
-	return Default.Log(Swarn, msg)
+// Warn tries to log message list with warn severity to Default logger
+func Warn(msg ...interface{}) error {
+	return Default.Log(Swarn, msg...)
 }
 
-// Error tries to log message with error severity to Default logger
-func Error(msg string) error {
-	return Default.Log(Serror, msg)
+// Error tries to log message list with error severity to Default logger
+func Error(msg ...interface{}) error {
+	return Default.Log(Serror, msg...)
 }
 
-// Fatal tries to log message with fatal severity to Default logger and panics
-func Fatal(msg string) (err error) {
-	err = Default.Log(Sfatal, msg)
-	panic(Default.Package + ":" + Sname[Sfatal] + ": " + msg)
+// Fatal tries to log message list with fatal severity to Default logger and panics
+func Fatal(msg ...interface{}) (err error) {
+	err = Default.Log(Sfatal, msg...)
+	pm := Default.Package[2:] + Sname[Sfatal]
+	if err != nil {
+		pm += err.Error()
+	}
+	panic(pm)
 }
