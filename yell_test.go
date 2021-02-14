@@ -51,7 +51,7 @@ func (m *myLocker) Unlock() {
 
 func TestWL(t *testing.T) {
 	var wl myLocker
-	Default.Writer = &wl.myWriter // only writer
+	Default.writer = &wl.myWriter // only writer
 
 	// Default level = warn, Info() logs?
 	if err := Info("msg1", 1.2); err != nil {
@@ -78,7 +78,7 @@ func TestWL(t *testing.T) {
 	}
 
 	wl.zero()
-	Default.Writer = &wl // writer & locker
+	Default.writer = &wl // writer & locker
 
 	// also calling Lock()/Unlock() ?
 	if err := Warn("msg3", true); err != nil {
@@ -86,5 +86,11 @@ func TestWL(t *testing.T) {
 	}
 	if !(1 == wl.lo && wl.lo < wl.wr && wl.wr < wl.ul) {
 		t.Fatal("writer-locker did not work")
+	}
+
+	// test update
+	var wl2 myLocker
+	if Default.UpdateWriter(&wl2) {
+		t.Fatal("must not update with different locker")
 	}
 }
