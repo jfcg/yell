@@ -68,7 +68,7 @@ var UTC = false
 //
 //  // Fatal tries to log message list with fatal severity and panics
 //  func Fatal(msg ...interface{}) (err error) {
-//  	err = Logger.Log(Sfatal, msg...)
+//  	err = Logger.Log(yell.Sfatal, msg...)
 //  	pm := Logger.Name() + yell.Sname[yell.Sfatal]
 //  	if err != nil {
 //  		pm += err.Error()
