@@ -4,7 +4,8 @@ yell is yet another minimalistic logging library. It comes with:
 - simple API
 - sync.Locker support
 - package-specific loggers
-- customizations
+- customizations (severity names, time format, UTC)
+- easy, granular request location (file.go:line) logging
 - [semantic](https://semver.org) versioning
 
 ### Support

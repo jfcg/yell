@@ -5,7 +5,8 @@
 */
 
 // Package yell is yet another minimalistic logging library. It provides four severity
-// levels, simple API, sync.Locker support, package-specific loggers, customizations.
+// levels, simple API, sync.Locker support, package-specific loggers, customizations
+// (severity names, time format, UTC), easy & granular request location (file.go:line).
 package yell
 
 import (
@@ -28,6 +29,14 @@ const (
 	Sfatal
 	Snolog // disables logging
 )
+
+// Caller type allows to log request location (file.go:line) with more granularity like:
+//  func f1() {
+//  	yell.Warn("my warning1")                 // include this line in log record
+//  	yell.Warn(yell.Caller(1), "my warning2") // include f1() caller in log record
+//  }
+// Caller depth must be 1 or more, otherwise it is ignored.
+type Caller int
 
 // Sname is the list of severity names (in increasing severity) that appear in logs
 var Sname = [...]string{"info:", "warn:", "error:", "fatal:"}
@@ -73,6 +82,7 @@ var UTC = false
 //  	if err != nil {
 //  		pm += err.Error()
 //  	}
+//  	// probably panic or os.Exit(1) in a fatal situation
 //  	panic(pm)
 //  }
 type Logger struct {
@@ -150,7 +160,20 @@ func (lg *Logger) SetMinLevel(level Severity) {
 // is not empty. Message list must not end with a newline. Log tries to include request
 // location (file.go:line) in records, so it must be called as described in Logger doc.
 // If Logger.writer also implements sync.Locker, Lock/Unlock is used to protect logging.
+// First member of message list can be caller depth, which must be 1 or more, otherwise
+// it is ignored. See Caller doc.
 func (lg *Logger) Log(level Severity, msg ...interface{}) (err error) {
+
+	skip := 2
+	if len(msg) > 0 {
+		// consume caller depth if present
+		if c, ok := msg[0].(Caller); ok {
+			if c > 0 {
+				skip += int(c) // must be positive
+			}
+			msg = msg[1:]
+		}
+	}
 
 	if !(len(msg) > 0 && lg.minLevel <= level && level < Snolog) {
 		return // empty msg or ignored level
@@ -164,7 +187,7 @@ func (lg *Logger) Log(level Severity, msg ...interface{}) (err error) {
 	prem := now.Format(TimeFormat) + lg.name + Sname[level]
 
 	// try to locate request location
-	_, file, line, ok := runtime.Caller(2)
+	_, file, line, ok := runtime.Caller(skip)
 	if ok {
 		file = filepath.Base(file) // full path to file name
 		prem += fmt.Sprintf(" %s:%d:", file, line)
