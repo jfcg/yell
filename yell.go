@@ -215,7 +215,7 @@ func (lg *Logger) Log(level Severity, msg ...interface{}) (err error) {
 		defer lc.Unlock()
 	}
 
-	fmt.Fprintln(lg.writer, msg...)
+	_, err = fmt.Fprintln(lg.writer, msg...)
 	return
 }
 
