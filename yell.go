@@ -30,14 +30,6 @@ const (
 	Snolog // disables logging
 )
 
-// Caller type allows to log request location (file.go:line) with more granularity like:
-//  func f1() {
-//  	yell.Warn("my warning1")                 // include this line in log record
-//  	yell.Warn(yell.Caller(1), "my warning2") // include f1() caller in log record
-//  }
-// Caller depth must be 1 or more, otherwise it is ignored.
-type Caller int
-
 // Sname is the list of severity names (in increasing severity) that appear in logs
 var Sname = [...]string{"info:", "warn:", "error:", "fatal:"}
 
@@ -156,6 +148,14 @@ func (lg *Logger) SetMinLevel(level Severity) {
 	}
 }
 
+// Caller type allows to log request location (file.go:line) with more granularity like:
+//  func f1() {
+//  	yell.Warn("my warning1")                 // include this line in log record
+//  	yell.Warn(yell.Caller(1), "my warning2") // include f1() caller in log record
+//  }
+// Caller depth must be 1 or more, otherwise it is ignored.
+type Caller int
+
 // Log records message list to Logger if level is severe enough for Logger and the list
 // is not empty. Message list must not end with a newline. Log tries to include request
 // location (file.go:line) in records, so it must be called as described in Logger doc.
@@ -164,37 +164,49 @@ func (lg *Logger) SetMinLevel(level Severity) {
 // it is ignored. See Caller doc.
 func (lg *Logger) Log(level Severity, msg ...interface{}) (err error) {
 
-	skip := 2
-	if len(msg) > 0 {
+	if !(lg.minLevel <= level && level < Snolog) {
+		return // ignored level
+	}
+
+	now := time.Now() // call Now() asap
+	var skip Caller
+	var cok bool
+
+	l := len(msg)
+	if l > 0 {
 		// consume caller depth if present
-		if c, ok := msg[0].(Caller); ok {
-			if c > 0 {
-				skip += int(c) // must be positive
+		skip, cok = msg[0].(Caller)
+		if cok {
+			l--
+			if skip < 0 {
+				skip = 0 // user must provide positive caller depth
 			}
-			msg = msg[1:]
 		}
 	}
 
-	if !(len(msg) > 0 && lg.minLevel <= level && level < Snolog) {
-		return // empty msg or ignored level
+	if l <= 0 {
+		return // empty msg
 	}
 
 	// prepare all input to Fprintln before possible locking
-	now := time.Now()
 	if UTC {
 		now = now.UTC()
 	}
 	prem := now.Format(TimeFormat) + lg.name + Sname[level]
 
-	// try to locate request location
-	_, file, line, ok := runtime.Caller(skip)
+	// try to discover request location
+	_, file, line, ok := runtime.Caller(int(skip) + 2)
 	if ok {
 		file = filepath.Base(file) // full path to file name
 		prem += fmt.Sprintf(" %s:%d:", file, line)
 	}
 
-	// prepend prem
-	msg = append([]interface{}{prem}, msg...)
+	// prepend prem to msg
+	if cok {
+		msg[0] = prem // avoid append when we have the Caller spot
+	} else {
+		msg = append([]interface{}{prem}, msg...)
+	}
 
 	// see if writer is also a sync.Locker
 	if lc, ok := lg.writer.(locker); ok {
