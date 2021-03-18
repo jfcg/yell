@@ -88,17 +88,13 @@ type Logger struct {
 	minLevel Severity
 }
 
-func isSpace(b byte) bool {
-	return b == ' ' || b == '\t' || b == '\n' || b == '\r'
-}
-
 // New creates a Logger with package/application name (must be of the form ": mypkg:"),
 // writer to log (which can also implement sync.Locker to protect logging) and minimum
 // severity level to log. Panics if arguments are invalid.
 func New(name string, writer io.Writer, minLevel Severity) Logger {
 	l := len(name) - 1
-	if l < 3 || name[0] != ':' || name[1] != ' ' || isSpace(name[2]) ||
-		isSpace(name[l-1]) || name[l] != ':' || writer == nil || minLevel > Snolog {
+	if l < 3 || name[0] != ':' || name[1] != ' ' || name[2] <= ' ' ||
+		name[l-1] <= ' ' || name[l] != ':' || writer == nil || minLevel > Snolog {
 		panic("Invalid arguments to yell.New()")
 	}
 	return Logger{name, writer, minLevel}
