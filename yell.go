@@ -180,6 +180,8 @@ func (lg *Logger) Log(level Severity, msg ...interface{}) (err error) {
 			l--
 			if skip < 0 {
 				skip = 0 // user must provide positive caller depth
+			} else if skip > 99 {
+				skip = 99 // avoid excessive caller depths
 			}
 		}
 	}
