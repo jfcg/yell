@@ -49,6 +49,16 @@ func (m *myLocker) Unlock() {
 	m.ul = m.n // record Unlock's call order
 }
 
+func newWorks() (ok bool) {
+	defer func() {
+		if recover() != nil {
+			ok = true
+		}
+	}()
+	_ = New(":  :", Default.writer, Sinfo)
+	return
+}
+
 func TestWL(t *testing.T) {
 	var wl myLocker
 	Default.writer = &wl.myWriter // only writer
@@ -92,5 +102,10 @@ func TestWL(t *testing.T) {
 	var wl2 myLocker
 	if Default.UpdateWriter(&wl2) {
 		t.Fatal("must not update with different locker")
+	}
+
+	// test New()
+	if !newWorks() {
+		t.Fatal("New() must have panicked")
 	}
 }
