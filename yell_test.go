@@ -16,12 +16,19 @@ type myWriter struct {
 	n, wr uint32
 }
 
+var (
+	fileName = "yell_test.go:"
+	sevName  = "info"
+)
+
+const logName = "yell.test:"
+
 func (m *myWriter) Write(p []byte) (n int, err error) {
 	m.n++
 	m.wr = m.n // record Write's call order
 
-	if strings.Index(string(p), ":warn: yell_test.go:") < 0 {
-		err = errors.New("Write's input missing necessary info")
+	if strings.Index(string(p), ": "+logName+sevName+": "+fileName) < 0 {
+		err = errors.New("input missing necessary info")
 	}
 	return
 }
@@ -49,7 +56,7 @@ func (m *myLocker) Unlock() {
 	m.ul = m.n // record Unlock's call order
 }
 
-func newWorks() (ok bool) {
+func newPanics() (ok bool) {
 	defer func() {
 		if recover() != nil {
 			ok = true
@@ -59,53 +66,123 @@ func newWorks() (ok bool) {
 	return
 }
 
-func TestWL(t *testing.T) {
-	var wl myLocker
-	Default.writer = &wl.myWriter // only writer
+func fatalPanics() (ok bool) {
+	defer func() {
+		if recover() != nil {
+			ok = true
+		}
+	}()
+	_ = Fatal("msg5")
+	return
+}
 
-	// Default level = warn, Info() logs?
-	if err := Info("msg1", 1.2); err != nil {
+func TestWL(t *testing.T) {
+	if Default.Name() != logName {
+		t.Fatal("unexpected logger name")
+	}
+
+	var wl myLocker
+	if !Default.UpdateWriter(&wl.myWriter) { // only writer
+		t.Fatal("must update the writer")
+	}
+	if !wl.isZero() {
+		t.Fatal("must not call any method")
+	}
+
+	// Default severiy level is warn, Info() logs?
+	if err := Info("msg0", 1.2); err != nil {
 		t.Fatal(err)
 	}
 	if !wl.isZero() {
-		t.Fatal("must not log info")
+		t.Fatal("must not log info level")
 	}
 
-	// log empty list?
-	if err := Warn(); err != nil {
+	// set min severity to info
+	Default.SetMinLevel(Sinfo)
+
+	// only calling Write() ?
+	if err := Info("msg1", 2); err != nil {
+		t.Fatal(err)
+	}
+	if wl.wr != 1 || wl.lo != 0 || wl.ul != 0 {
+		t.Fatal("must log info")
+	}
+	wl.zero()
+
+	// non-positive caller depth must be ignored
+	if err := Info(Caller(-1), "msg2", 3); err != nil {
+		t.Fatal(err)
+	}
+	if wl.wr != 1 || wl.lo != 0 || wl.ul != 0 {
+		t.Fatal("must log info")
+	}
+	wl.zero()
+
+	// must not log empty list
+	if err := Warn(Caller(1)); err != nil {
 		t.Fatal(err)
 	}
 	if !wl.isZero() {
 		t.Fatal("must not log empty list")
 	}
+	UTC = true // allows UTC time
 
-	// only calling Write() ?
-	if err := Warn("msg2", 3); err != nil {
-		t.Fatal(err)
+	if !Default.UpdateWriter(&wl) { // writer & locker
+		t.Fatal("must update the writer")
 	}
-	if wl.wr == 0 || wl.lo != 0 || wl.ul != 0 {
-		t.Fatal("writer did not work")
+	if !wl.isZero() {
+		t.Fatal("must not call any method")
 	}
-
-	wl.zero()
-	Default.writer = &wl // writer & locker
 
 	// also calling Lock()/Unlock() ?
-	if err := Warn("msg3", true); err != nil {
+	// Caller(1) will change log location to testing.go:line
+	sevName, fileName = "warn", "testing.go:"
+	if err := Warn(Caller(1), "msg3", true); err != nil {
 		t.Fatal(err)
 	}
-	if !(1 == wl.lo && wl.lo < wl.wr && wl.wr < wl.ul) {
+	if wl.lo != 1 || wl.wr != 2 || wl.ul != 3 {
 		t.Fatal("writer-locker did not work")
 	}
+	wl.zero()
 
-	// test update
+	// test UpdateWriter
+	// same writer/locker (for testing)
+	if !Default.UpdateWriter(&wl) {
+		t.Fatal("must update the writer")
+	}
+	if wl.wr != 0 || wl.lo != 1 || wl.ul != 2 {
+		t.Fatal("must call lock/unlock only")
+	}
+	wl.zero()
+
+	// different writer/locker
 	var wl2 myLocker
 	if Default.UpdateWriter(&wl2) {
 		t.Fatal("must not update with different locker")
 	}
+	if !wl.isZero() {
+		t.Fatal("must not call lock/unlock")
+	}
+
+	// disable logging
+	Default.SetMinLevel(Snolog + 1) // to test invalid severity levels
+	if err := Warn("msg4", false); err != nil {
+		t.Fatal(err)
+	}
+	if !wl.isZero() {
+		t.Fatal("must not log anything")
+	}
+
+	// test Fatal()
+	if !fatalPanics() {
+		t.Fatal("Fatal() must have panicked")
+	}
+	if !wl.isZero() {
+		t.Fatal("must not log anything")
+	}
 
 	// test New()
-	if !newWorks() {
+	if !newPanics() {
 		t.Fatal("New() must have panicked")
 	}
 }
