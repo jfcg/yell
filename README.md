@@ -4,7 +4,7 @@ yell is yet another minimalistic logging library. It comes with:
 - simple API
 - sync.Locker support
 - package-specific loggers
-- customizations (severity names, time format, UTC)
+- customizations (severity names, time format, local or UTC time)
 - easy, granular request location (file.go:line) logging
 - [semantic](https://semver.org) versioning
 
@@ -59,7 +59,7 @@ import (
 	"github.com/jfcg/yell"
 )
 
-func f1() {
+func log() {
 	defer func() {
 		fmt.Println("recovering:", recover())
 	}()
@@ -70,7 +70,7 @@ func f1() {
 	// uses yell.Default Logger, minimum severity is warning by default
 	yell.Warn("some warning:", "few details")
 
-	// record f1() caller instead of this line
+	// record log() caller instead of this line
 	mypkg.Error(yell.Caller(1), "bad error", 3.5, "data")
 
 	// Fatal() logs & panicks
@@ -83,24 +83,24 @@ func main() {
 
 	// set min severity level to info
 	mypkg.Logger.SetMinLevel(yell.Sinfo)
-	f1()
+	log()
 
 	// yell library uses local time by default, to get coordinated universal time
 	yell.UTC = true
-	f1()
+	log()
 
 	// change time format
 	yell.TimeFormat = yell.TimeFormat[:19]
-	f1()
+	log()
 
 	// customized severity names (increasing severity)
 	yell.Sname = [...]string{"信息:", "警告:", "错误:", "致命的:"}
 	yell.UTC = false
-	f1()
+	log()
 
 	// disable logging for yell.Default
 	yell.Default.SetMinLevel(yell.Snolog)
-	f1()
+	log()
 }
 ```
 output:
@@ -127,7 +127,7 @@ recovering: myApp:fatal:
 recovering: myApp:致命的:
 2021-03-28 21:48:53: mypkg:信息: myApp.go:15: some info: 1 more
 2021-03-28 21:48:53: mypkg:错误: myApp.go:50: bad error 3.5 data
-recovering: myApp:致命的
+recovering: myApp:致命的:
 ```
 
 ### Support

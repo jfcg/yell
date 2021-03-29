@@ -6,7 +6,8 @@
 
 // Package yell is yet another minimalistic logging library. It provides four severity
 // levels, simple API, sync.Locker support, package-specific loggers, customizations
-// (severity names, time format, UTC), easy & granular request location (file.go:line).
+// (severity names, time format, local or UTC time), easy & granular request location
+// (file.go:line) logging.
 package yell
 
 import (
