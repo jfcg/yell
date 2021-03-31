@@ -161,30 +161,23 @@ type Caller int
 // it is ignored. See Caller doc.
 func (lg *Logger) Log(level Severity, msg ...interface{}) (err error) {
 
-	if !(lg.minLevel <= level && level < Snolog) {
-		return // ignored level
+	if !(lg.minLevel <= level && level < Snolog && 0 < len(msg)) {
+		return // ignored level or empty msg
 	}
-
 	now := time.Now() // call Now() asap
-	var skip Caller
-	var cok bool
 
-	l := len(msg)
-	if l > 0 {
-		// consume caller depth if present
-		skip, cok = msg[0].(Caller)
-		if cok {
-			l--
-			if skip < 0 {
-				skip = 0 // user must provide positive caller depth
-			} else if skip > 99 {
-				skip = 99 // avoid excessive caller depths
-			}
+	// consume caller depth if present
+	skip, cok := msg[0].(Caller)
+	if cok {
+		if len(msg) == 1 {
+			return // empty msg
 		}
-	}
 
-	if l <= 0 {
-		return // empty msg
+		if skip < 0 {
+			skip = 0 // user must provide positive caller depth
+		} else if skip > 99 {
+			skip = 99 // avoid excessive caller depths
+		}
 	}
 
 	// prepare all input to Fprintln before possible locking
