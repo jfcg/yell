@@ -2,7 +2,7 @@
 yell is yet another minimalistic logging library. It comes with:
 - four severity levels
 - simple API
-- sync.Locker support
+- io.Writer & sync.Locker support
 - package-specific loggers
 - customizations (severity names, time format, local or UTC time)
 - easy, granular request location (file.go:line) logging
