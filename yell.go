@@ -96,7 +96,7 @@ func New(name string, writer io.Writer, minLevel Severity) Logger {
 	l := len(name) - 1
 	if l < 3 || name[0] != ':' || name[1] != ' ' || name[2] <= ' ' ||
 		name[l-1] <= ' ' || name[l] != ':' || writer == nil || minLevel > Snolog {
-		panic("Invalid arguments to yell.New()")
+		panic("yell: invalid arguments to New")
 	}
 	return Logger{name, writer, minLevel}
 }
@@ -136,13 +136,18 @@ func (lg *Logger) UpdateWriter(writer io.Writer) (success bool) {
 	return true
 }
 
-// SetMinLevel sets minimum severity level for logging
-func (lg *Logger) SetMinLevel(level Severity) {
+// SetLevel sets minimum severity level for logging
+func (lg *Logger) SetLevel(level Severity) {
 	if level > Snolog {
 		lg.minLevel = Snolog
 	} else {
 		lg.minLevel = level
 	}
+}
+
+// GetLevel returns minimum severity level for logging
+func (lg *Logger) GetLevel() Severity {
+	return lg.minLevel
 }
 
 // Caller type allows to log request location (file.go:line) with more granularity like:
@@ -211,10 +216,8 @@ func (lg *Logger) Log(level Severity, msg ...interface{}) (err error) {
 	return
 }
 
-// Default logger utilizes os.Args[0] for name, os.Stdout as writer, with warn severity.
-var Default = Logger{
-	": " + filepath.Base(os.Args[0]) + ":",
-	os.Stdout, Swarn}
+// Default logger utilizes os.Args[0] for name, os.Stdout as writer, with warn severity
+var Default = Logger{": " + filepath.Base(os.Args[0]) + ":", os.Stdout, Swarn}
 
 // Info tries to log message list with info severity to Default logger
 func Info(msg ...interface{}) error {
