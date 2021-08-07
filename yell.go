@@ -4,7 +4,7 @@
 	file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
-// Package yell is yet another minimalistic logging library. It provides four severity
+// Package yell is yet another minimalist logging library. It provides four severity
 // levels, simple API, io.Writer & sync.Locker support, package-specific loggers,
 // customizations (severity names, time format, local or UTC time), easy & granular
 // request location (file.go:line) logging.

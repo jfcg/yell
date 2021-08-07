@@ -1,8 +1,8 @@
 ## yell [![Go Report Card](https://goreportcard.com/badge/github.com/jfcg/yell)](https://goreportcard.com/report/github.com/jfcg/yell) [![go.dev ref](https://raw.githubusercontent.com/jfcg/.github/main/godev.svg)](https://pkg.go.dev/github.com/jfcg/yell)
-yell is yet another minimalistic logging library. It comes with:
-- four severity levels
+yell is yet another minimalist logging library. It comes with:
+- four severity levels (info, warn, error, fatal)
 - simple API
-- io.Writer & sync.Locker support
+- [`io.Writer`](https://pkg.go.dev/io#Writer) & [`sync.Locker`](https://pkg.go.dev/sync#Locker) support
 - package-specific loggers
 - customizations (severity names, time format, local or UTC time)
 - easy, granular request location (file.go:line) logging
@@ -82,7 +82,7 @@ func main() {
 	mypkg.Info("some info:", 3, "more")
 
 	// set min severity level to info
-	mypkg.Logger.SetMinLevel(yell.Sinfo)
+	mypkg.Logger.SetLevel(yell.Sinfo)
 	log()
 
 	// yell library uses local time by default, to get coordinated universal time
@@ -99,7 +99,7 @@ func main() {
 	log()
 
 	// disable logging for yell.Default
-	yell.Default.SetMinLevel(yell.Snolog)
+	yell.Default.SetLevel(yell.Snolog)
 	log()
 }
 ```
