@@ -1,4 +1,4 @@
-## yell [![Go Report Card](https://goreportcard.com/badge/github.com/jfcg/yell)](https://goreportcard.com/report/github.com/jfcg/yell) [![go.dev ref](https://raw.githubusercontent.com/jfcg/.github/main/godev.svg)](https://pkg.go.dev/github.com/jfcg/yell)
+## yell [![go report card](https://goreportcard.com/badge/github.com/jfcg/yell)](https://goreportcard.com/report/github.com/jfcg/yell) [![go.dev ref](https://raw.githubusercontent.com/jfcg/.github/main/godev.svg)](https://pkg.go.dev/github.com/jfcg/yell#pkg-overview)
 yell is yet another minimalist logging library. It comes with:
 - four severity levels (info, warn, error, fatal)
 - simple API
@@ -131,4 +131,6 @@ recovering: myApp:致命的:
 ```
 
 ### Support
-If you use yell and like it, please support via ETH:`0x464B840ee70bBe7962b90bD727Aac172Fa8B9C15`
+If you use yell and like it, please support via:
+- BTC:`bc1qr8m7n0w3xes6ckmau02s47a23e84umujej822e`
+- ETH:`0x3a844321042D8f7c5BB2f7AB17e20273CA6277f6`
